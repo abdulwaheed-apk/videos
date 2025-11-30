@@ -1,0 +1,40 @@
+steps:
+- id: 'Install'
+  name: 'node:20'
+  entrypoint: 'npm'
+  args: ['ci']
+  
+- id: 'Build'
+  name: 'node:20'
+  entrypoint: 'npm'
+  args: ['run', 'build']
+  env:
+    - 'NEXT_PUBLIC_FIREBASE_API_KEY=${_FIREBASE_API_KEY}'
+    - 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${_FIREBASE_AUTH_DOMAIN}'
+    - 'NEXT_PUBLIC_FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID}'
+    - 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${_FIREBASE_STORAGE_BUCKET}'
+    - 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${_FIREBASE_MESSAGING_SENDER_ID}'
+    - 'NEXT_PUBLIC_FIREBASE_APP_ID=${_FIREBASE_APP_ID}'
+    - 'NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=${_FIREBASE_MEASUREMENT_ID}'
+    - 'NEXT_PUBLIC_API_URL=${_API_URL}'
+    - 'FIREBASE_SERVICE_ACCOUNT=${FIREBASE_SERVICE_ACCOUNT}'
+  secretEnv: ['FIREBASE_SERVICE_ACCOUNT']
+
+- id: 'Deploy'
+  name: 'firebase/cli'
+  args: ['deploy', '--only', 'hosting']
+  
+substitutions:
+  _FIREBASE_API_KEY: ''
+  _FIREBASE_AUTH_DOMAIN: ''
+  _FIREBASE_PROJECT_ID: ''
+  _FIREBASE_STORAGE_BUCKET: ''
+  _FIREBASE_MESSAGING_SENDER_ID: ''
+  _FIREBASE_APP_ID: ''
+  _FIREBASE_MEASUREMENT_ID: ''
+  _API_URL: ''
+
+secrets:
+- kmsKeyName: projects/YOUR_PROJECT_ID/locations/global/keyRings/YOUR_KEY_RING/cryptoKeys/YOUR_KEY_NAME
+  secretEnv:
+    FIREBASE_SERVICE_ACCOUNT: firebase_sa_key

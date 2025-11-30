@@ -1,13 +1,35 @@
 steps:
+# -------------------------------------------------------------------------
+# 1. Install Dependencies
+# -------------------------------------------------------------------------
 - id: 'Install'
   name: 'node:20'
   entrypoint: 'npm'
   args: ['ci']
   
+# -------------------------------------------------------------------------
+# 2. Decode and Save Service Account Key
+#    - Saves the decoded JSON string to a file named 'sa-key.json'.
+# -------------------------------------------------------------------------
+- id: 'Decode Secret'
+  name: 'node:20'
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+      echo "${FIREBASE_SERVICE_ACCOUNT}" | base64 --decode > sa-key.json
+  # Pass the encoded secret to this step
+  secretEnv: ['FIREBASE_SERVICE_ACCOUNT']
+
+# -------------------------------------------------------------------------
+# 3. Build Next.js Application
+# -------------------------------------------------------------------------
 - id: 'Build'
   name: 'node:20'
   entrypoint: 'npm'
   args: ['run', 'build']
+  # Note: The service account key is now accessed via the file 'sa-key.json' 
+  # or is passed to the Firebase CLI in the next step.
   env:
     - 'NEXT_PUBLIC_FIREBASE_API_KEY=${_FIREBASE_API_KEY}'
     - 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${_FIREBASE_AUTH_DOMAIN}'
@@ -17,13 +39,26 @@ steps:
     - 'NEXT_PUBLIC_FIREBASE_APP_ID=${_FIREBASE_APP_ID}'
     - 'NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=${_FIREBASE_MEASUREMENT_ID}'
     - 'NEXT_PUBLIC_API_URL=${_API_URL}'
-    - 'FIREBASE_SERVICE_ACCOUNT=${FIREBASE_SERVICE_ACCOUNT}'
-  secretEnv: ['FIREBASE_SERVICE_ACCOUNT']
 
+# -------------------------------------------------------------------------
+# 4. Deploy to Firebase App Hosting
+#    - Uses the path to the decoded service account key file for auth.
+# -------------------------------------------------------------------------
 - id: 'Deploy'
   name: 'firebase/cli'
-  args: ['deploy', '--only', 'hosting']
-  
+  args: 
+    - 'deploy'
+    - '--only'
+    - 'hosting'
+  # Authenticate the deployment using the decoded service account key file
+  env:
+    - 'FIREBASE_AUTH_EMULATOR_HOST=' # Clear potential emulator conflicts
+    - 'GCLOUD_PROJECT=${_FIREBASE_PROJECT_ID}' # Pass the project ID
+    - 'GOOGLE_APPLICATION_CREDENTIALS=sa-key.json' # Point to the decoded file
+
+# -------------------------------------------------------------------------
+# Substitutions and Secrets (Configuration section, remains the same)
+# -------------------------------------------------------------------------
 substitutions:
   _FIREBASE_API_KEY: ''
   _FIREBASE_AUTH_DOMAIN: ''

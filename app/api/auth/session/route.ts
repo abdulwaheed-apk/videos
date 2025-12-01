@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the ID token
+    console.log("idToken", idToken);
     const decodedToken = await adminAuth.verifyIdToken(idToken);
 
     // Set session cookie (expires in 14 days)

@@ -1,0 +1,8 @@
+{
+  "apphosting": {
+    "backend": {
+      "serviceAccount": "sa-key.json"
+    }
+  }
+}
+

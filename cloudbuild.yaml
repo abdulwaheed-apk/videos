@@ -25,30 +25,24 @@ steps:
       pnpm --version
 
 # -------------------------------------------------------------------------
-# 2. Decode and Save Service Account Key
-#    - Saves the decoded JSON string to a file and sets it as env var
+# 2. Get Service Account from Secret Manager
 # -------------------------------------------------------------------------
-- id: 'Process Secret'
-  name: 'node:20'
+- id: 'Get Service Account'
+  name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'bash'
   args:
     - '-c'
     - |
-      # KMS automatically decrypts the secret, so it comes as plain text
-      # Save the service account JSON directly
-      echo "${FIREBASE_SERVICE_ACCOUNT}" > /workspace/sa-key.json
-      
+      gcloud secrets versions access latest --secret=firebaseServiceAccount --project=${_FIREBASE_PROJECT_ID} > /workspace/sa-key.json
       # Verify it's valid JSON
       if ! cat /workspace/sa-key.json | python3 -m json.tool > /dev/null 2>&1; then
         echo "ERROR: Service account is not valid JSON"
         cat /workspace/sa-key.json | head -c 200
         exit 1
       fi
-      
       # Create base64 encoded version for environment variable (Next.js needs it as base64 string)
       cat /workspace/sa-key.json | base64 -w 0 > /workspace/firebase_sa_base64.txt
-      echo "Service account processed and saved successfully"
-  secretEnv: ['FIREBASE_SERVICE_ACCOUNT']
+      echo "Service account retrieved and encoded"
 
 # -------------------------------------------------------------------------
 # 3. Install Dependencies
@@ -83,9 +77,9 @@ steps:
       NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="${_FIREBASE_MEASUREMENT_ID}" \
       FIREBASE_SERVICE_ACCOUNT="${FIREBASE_SERVICE_ACCOUNT_B64}" \
       NODE_ENV=production \
-      NEXT_PUBLIC_API_URL="${_API_URL}" \
+      NEXT_PUBLIC_API_URL="${_API_URL:-https://videos--ghost-money-world.us-east4.hosted.app/api}" \
       pnpm run build
-  waitFor: ['Install Dependencies', 'Process Secret']
+  waitFor: ['Install Dependencies', 'Get Service Account']
 
 # -------------------------------------------------------------------------
 # 5. Deploy to Firebase App Hosting
@@ -110,41 +104,23 @@ steps:
 # -------------------------------------------------------------------------
 substitutions:
   # Firebase Client Configuration
-  _FIREBASE_API_KEY: ''
-  _FIREBASE_AUTH_DOMAIN: ''
-  _FIREBASE_PROJECT_ID: 'ghost-money-world'  # Update with your project ID
-  _FIREBASE_STORAGE_BUCKET: ''
-  _FIREBASE_MESSAGING_SENDER_ID: ''
-  _FIREBASE_APP_ID: ''
-  _FIREBASE_MEASUREMENT_ID: ''
-  
-  # Server-side Firebase Service Account (JSON string, base64 encoded)
-  # This should be the same as FIREBASE_SERVICE_ACCOUNT secret but as substitution
-  # for the build step. You can also pass it as a secret if preferred.
-  _FIREBASE_SERVICE_ACCOUNT_JSON: ''
+  _FIREBASE_API_KEY: 'AIzaSyCSnOql-nQLIvbhWAhQZg_Sb6Kwu95i5ew'
+  _FIREBASE_AUTH_DOMAIN: 'ghost-money-world.firebaseapp.com'
+  _FIREBASE_PROJECT_ID: 'ghost-money-world'
+  _FIREBASE_STORAGE_BUCKET: 'ghost-money-world.firebasestorage.app'
+  _FIREBASE_MESSAGING_SENDER_ID: '276987047372'
+  _FIREBASE_APP_ID: '1:276987047372:web:d0ccc8e3c58a2122de8169'
+  _FIREBASE_MEASUREMENT_ID: 'G-FEY4FCPZ63'
   
   # Optional
-  _API_URL: ''
+  _API_URL: 'https://videos--ghost-money-world.us-east4.hosted.app/api'
 
 # -------------------------------------------------------------------------
 # Secrets Configuration
 # -------------------------------------------------------------------------
-# IMPORTANT: Update the kmsKeyName with your actual project ID and key path
-# Format: projects/PROJECT_ID/locations/global/keyRings/KEY_RING/cryptoKeys/KEY_NAME
-# Example: projects/ghost-money-world/locations/global/keyRings/cloud-build-secrets/cryptoKeys/firebase-service-account
-#
-# To store your service account in KMS:
-# 1. Base64 encode your service account JSON:
-#    cat service-account.json | base64 -w 0 > sa-encoded.txt
-# 2. Encrypt and store in KMS:
-#    gcloud kms encrypt --plaintext-file=sa-encoded.txt --ciphertext-file=sa-encrypted.enc \
-#      --key=firebase-service-account --keyring=cloud-build-secrets --location=global \
-#      --project=ghost-money-world
-# 3. Create the secret in Cloud Build with the encrypted file
-secrets:
-  - kmsKeyName: projects/ghost-money-world/locations/global/keyRings/cloud-build-secrets/cryptoKeys/firebase-service-account
-    secretEnv:
-      FIREBASE_SERVICE_ACCOUNT: firebase_sa_key
+# Using Secret Manager instead of KMS
+# The secret 'firebaseServiceAccount' is retrieved in the 'Get Service Account' step
+# Make sure the Cloud Build service account has 'Secret Manager Secret Accessor' role
 
 # -------------------------------------------------------------------------
 # Options

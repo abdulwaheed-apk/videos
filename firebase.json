@@ -1,11 +1,6 @@
 {
   "apphosting": [
     {
-      "backend": {
-        "serviceAccount": "sa-key.json"
-      }
-    },
-    {
       "backendId": "videos",
       "rootDir": "/",
       "ignore": [

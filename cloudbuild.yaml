@@ -1,3 +1,16 @@
+# ========================================================================
+# Cloud Build Configuration for Firebase App Hosting
+# ========================================================================
+# 
+# IMPORTANT: If you get "illegal base64 data" error:
+# 1. The KMS secret must be base64-encoded before encryption
+# 2. Or use cloudbuild-simple.yaml which uses Secret Manager (easier)
+#
+# To store secret in KMS correctly:
+#   cat service-account.json | base64 -w 0 | gcloud kms encrypt ...
+#
+# ========================================================================
+
 steps:
 # -------------------------------------------------------------------------
 # 1. Install pnpm (if not available in the image)
@@ -15,17 +28,26 @@ steps:
 # 2. Decode and Save Service Account Key
 #    - Saves the decoded JSON string to a file and sets it as env var
 # -------------------------------------------------------------------------
-- id: 'Decode Secret'
+- id: 'Process Secret'
   name: 'node:20'
   entrypoint: 'bash'
   args:
     - '-c'
     - |
-      # Decode and save service account JSON file
-      echo "${FIREBASE_SERVICE_ACCOUNT}" | base64 --decode > /workspace/sa-key.json
-      # Also create base64 encoded version for environment variable
+      # KMS automatically decrypts the secret, so it comes as plain text
+      # Save the service account JSON directly
+      echo "${FIREBASE_SERVICE_ACCOUNT}" > /workspace/sa-key.json
+      
+      # Verify it's valid JSON
+      if ! cat /workspace/sa-key.json | python3 -m json.tool > /dev/null 2>&1; then
+        echo "ERROR: Service account is not valid JSON"
+        cat /workspace/sa-key.json | head -c 200
+        exit 1
+      fi
+      
+      # Create base64 encoded version for environment variable (Next.js needs it as base64 string)
       cat /workspace/sa-key.json | base64 -w 0 > /workspace/firebase_sa_base64.txt
-      echo "Service account decoded and saved"
+      echo "Service account processed and saved successfully"
   secretEnv: ['FIREBASE_SERVICE_ACCOUNT']
 
 # -------------------------------------------------------------------------
@@ -63,7 +85,7 @@ steps:
       NODE_ENV=production \
       NEXT_PUBLIC_API_URL="${_API_URL}" \
       pnpm run build
-  waitFor: ['Install Dependencies', 'Decode Secret']
+  waitFor: ['Install Dependencies', 'Process Secret']
 
 # -------------------------------------------------------------------------
 # 5. Deploy to Firebase App Hosting
@@ -107,9 +129,20 @@ substitutions:
 # -------------------------------------------------------------------------
 # Secrets Configuration
 # -------------------------------------------------------------------------
+# IMPORTANT: Update the kmsKeyName with your actual project ID and key path
+# Format: projects/PROJECT_ID/locations/global/keyRings/KEY_RING/cryptoKeys/KEY_NAME
+# Example: projects/ghost-money-world/locations/global/keyRings/cloud-build-secrets/cryptoKeys/firebase-service-account
+#
+# To store your service account in KMS:
+# 1. Base64 encode your service account JSON:
+#    cat service-account.json | base64 -w 0 > sa-encoded.txt
+# 2. Encrypt and store in KMS:
+#    gcloud kms encrypt --plaintext-file=sa-encoded.txt --ciphertext-file=sa-encrypted.enc \
+#      --key=firebase-service-account --keyring=cloud-build-secrets --location=global \
+#      --project=ghost-money-world
+# 3. Create the secret in Cloud Build with the encrypted file
 secrets:
-  # Update these paths with your actual KMS key configuration
-  - kmsKeyName: projects/${_FIREBASE_PROJECT_ID}/locations/global/keyRings/cloud-build-secrets/cryptoKeys/firebase-service-account
+  - kmsKeyName: projects/ghost-money-world/locations/global/keyRings/cloud-build-secrets/cryptoKeys/firebase-service-account
     secretEnv:
       FIREBASE_SERVICE_ACCOUNT: firebase_sa_key
 

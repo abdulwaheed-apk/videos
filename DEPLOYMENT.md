@@ -10,6 +10,30 @@ This guide explains how to deploy your Next.js application to Firebase App Hosti
 4. **Cloud Build API**: Enabled in your GCP project
 5. **Secret Manager or KMS**: For storing the Firebase service account key
 
+## Quick Fix for "illegal base64 data" Error
+
+If you're getting the error `illegal base64 data at input byte 8`, it means:
+1. **KMS secret is not properly formatted** - The secret needs to be base64-encoded before storing in KMS
+2. **KMS key path is incorrect** - Substitutions don't work in kmsKeyName
+
+**Easiest Solution**: Use Secret Manager instead of KMS. Use `cloudbuild-simple.yaml` which uses Secret Manager.
+
+**To switch to Secret Manager:**
+```bash
+# Store your service account JSON directly (no base64 encoding needed)
+gcloud secrets create firebase_sa_key \
+  --data-file=path/to/service-account.json \
+  --project=ghost-money-world
+
+# Grant Cloud Build access
+gcloud secrets add-iam-policy-binding firebase_sa_key \
+  --member=serviceAccount:YOUR_CLOUD_BUILD_SERVICE_ACCOUNT@ghost-money-world.iam.gserviceaccount.com \
+  --role=roles/secretmanager.secretAccessor \
+  --project=ghost-money-world
+```
+
+Then use `cloudbuild-simple.yaml` instead of `cloudbuild.yaml`.
+
 ## Setup Steps
 
 ### 1. Create Firebase Service Account

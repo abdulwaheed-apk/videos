@@ -1,0 +1,66 @@
+# Settings for Cloud Run
+runConfig:
+  minInstances: 2
+  maxInstances: 100
+  concurrency: 100
+  cpu: 2
+  memoryMiB: 1024
+
+# Environment variables and secrets
+env:
+  # Firebase Public Configuration
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: "AIzaSyCSnOql-nQLIvbhWAhQZg_Sb6Kwu95i5ew"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: "ghost-money-world.firebaseapp.com"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: "ghost-money-world"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: "ghost-money-world.firebasestorage.app"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "276987047372"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:276987047372:web:d0ccc8e3c58a2122de8169"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+    value: "G-FEY4FCPZ63"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Firebase Service Account (stored as secret in Firebase Secret Manager)
+  - variable: FIREBASE_SERVICE_ACCOUNT
+    secret: firebaseServiceAccount
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Public API URL
+  - variable: NEXT_PUBLIC_API_URL
+    value: "https://videos--ghost-money-world.us-east4.hosted.app/api"
+    availability:
+      - BUILD
+      - RUNTIME

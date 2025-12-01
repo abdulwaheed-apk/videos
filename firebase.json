@@ -1,8 +1,21 @@
 {
-  "apphosting": {
-    "backend": {
-      "serviceAccount": "sa-key.json"
+  "apphosting": [
+    {
+      "backend": {
+        "serviceAccount": "sa-key.json"
+      }
+    },
+    {
+      "backendId": "videos",
+      "rootDir": "/",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "functions"
+      ],
+      "alwaysDeployFromSource": true
     }
-  }
+  ]
 }
-

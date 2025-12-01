@@ -5,7 +5,7 @@ runConfig:
   concurrency: 100
   cpu: 2
   memoryMiB: 1024
-
+# 
 # Environment variables and secrets
 env:
   # Firebase Public Configuration
